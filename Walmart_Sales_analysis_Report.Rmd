@@ -1,0 +1,379 @@
+---
+title: "Walmart weekly sales analysis report"
+author: "Viktor Alexy"
+date: '2018-08-23'
+output: 
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+### Objective of this analysis
+  
+  Fuel figure as an essential good for most Americans who go shopping at Walmart Store. At an average price of $2.15 per gallon last year, the average American forked about 1,400 dollars to fill up their tank. Walmart is not a high-end store; the average consumer is from poor social class to the average social class. For those two social classes, the marginal variation of fuel price will have a higher impact on consumer budget capacity while in consumer behaviour than the marginal impact on the rich social class. This last assumption justifies our research question. The results of our research if it is negative or positive will be important information to know, in case of the impact of fuel price variation on Walmart consumer behaviour, the fuel price could be added to the forecast procurement models. In a growth strategy planning, this kind of information can be relevant for the members of the decisional circles.
+  
+  Is it exist an impact on consumer behaviour when there is variation in the fuel price. If there exists a cause to effect what is the magnitude of this effect and how the consumer will react? Will they consume more or less at Walmart store?
+  
+  In the first part, we will build the most accurate model which can explain the impact on the Wall-Mart consumer behaviours.
+  
+  In the second part, we will try to identify if there are some store which can use the fuel price variation as an indicator on the future Wall-Mart sales.
+  
+  In the third part, we will try to identify if the stores for which the fuel price variation have a significant impact if those stores have some common characteristics as stores sizes or geographical localization.
+  
+##### Hypothesis
+1.The prices are fixed in time; there is the only variation in quantities.
+
+### Plan for the analysis
+
+1. Loading the data sets 
+2. We will look if there exists any correlation in the data
+3. We will observe ours two interest variables, fuel price and weekly sales for a better understanding of the distributions. 
+4. Regression analysis
++ 4.1. We will build the first model with store sales and fuel price
++ 4.2. We will make the second model to observe the impact per store, and we will add some controls variables: Temperature and Holiday
++ 4.3. We will add year and month as controls variables
++ 4.4. We will add controls variables in the way to obtain some stores characteristics for the impacted stores' sales for the fuel price variation.
+6. Global alaysis
+7. Conclusion
+
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#loading two data base
+setwd("/Users/viktoralexy/Desktop/Rproject/git_project")
+getwd()
+```
+
+### 1. Loading the datasets
+
+```{r, echo=TRUE}
+train <- read.csv("train.csv", header = TRUE)
+features <- read.csv("features.csv", header = TRUE)
+stores <- read.csv("stores.csv", header = TRUE)
+```
+
+### 2. We will look if there exists any correlation in the data
+
+```{r, echo=TRUE}
+fuelsales <- merge(train, features, by=c("Store","Date"))
+sts.ex.sat <- subset(fuelsales, select = c("Fuel_Price", "Weekly_Sales"))
+summary(sts.ex.sat)
+```
+  
+  Fuel price data observation: The distribution looks normal with the min of 2.472 and a max of 4.468 and median of 3.452.
+  
+  Weekly sales data observation: The distribution had a negative min of -4989 which it can be interesting to investigate why to find what can make a negative sales. If we compare the max of 693099 and the median of 7612 with a slightly higher mean of 15 981 we can suppose a distribution with a long right tail creating by a few extreme high weekly sales values. 
+
+```{r, echo=TRUE}
+cor(sts.ex.sat) 
+```
+  There is no correlation between weekly sales and fuel price which is not a good result in the way of our initial question, but we will continue to investigate if the exist relation by store.
+```{r, echo=FALSE}
+results = cor(sts.ex.sat[1:2])
+library(corrplot)
+library(ggplot2)
+```
+
+```{r, echo=TRUE}
+# plotting functions
+ggplot(data = sts.ex.sat, aes(x = Fuel_Price, y = Weekly_Sales)) +
+  geom_point(alpha = 0.1, aes(color = Weekly_Sales))
+```
+    
+  Unfortunately, this graph did not give us any valuable pieces of information in the potential relations between weekly sales and fuel price.
+  
+  First analysis gave us a lousy signal without a clear correlation between weekly sales and fuel price. However, we will continue our study in the way to investigate if there exists a cause to effect relation for some specific stores. If we obtain an affirmative answer, the forecast procurement team can consider the impact of this variable in their forecasts models.
+
+### 3. We will observe ours two interest variables, fuel price and weekly sales for a better understanding of the distributions.
+
+```{r, echo=TRUE}
+hist(fuelsales$Weekly_Sales)
+```
+  As we observed earlier in this analysis, this histogram has a long right tail. Those extreme data can be considered as outliers. We will correct this data set by excluding the extreme value to make a normal distribution. 
+```{r, echo=TRUE}
+IDout=which(fuelsales$Weekly_Sales>200000)
+```
+  It results by a data repartition, which has characteristics of closer to a normal distribution. 
+```{r, echo=TRUE}
+hist(fuelsales$Weekly_Sales-IDout)
+hist(fuelsales$Fuel_Price)
+```
+  
+  As we observed overlap of two processes considering as bimodal – it will have two most-frequent values. We will not stratify the data because we consider that the difference between min and max is reasonable. We will quip fule price data as is.
+
+### 4. Regressions analysis
+  
+  We will build the model, we will start with the regression of weekly sales on fuel price, and we will gradually add controls variables.
+
+#### 4.1.
+  First, we will regress weekly sales on fuel price and compare the results from the model with all weekly sales value and the model without the extreme sales values (IDout).
+```{r, echo=TRUE}
+model1 <- lm(Weekly_Sales ~ Fuel_Price, data=fuelsales) 
+summary(model1)
+
+#I will cut the extreme data from the tail probably due to the hollyday sales
+IDout=which(fuelsales$Weekly_Sales>200000)
+model1less <- lm(Weekly_Sales ~ Fuel_Price, data=fuelsales[-IDout,])
+# Summarize and print the results
+summary(model1less) # show regression coefficients table
+```
+
+#### Regression summary analysis Model 1 (including explanation of each indicators evaluated)
+
+   The model
+   Y = Weekly sales
+   X = Fuel price
+   $$ Y = \beta_0 + \beta_1 X + e $$
+
+##### The p-value
+
+  The Pr(>|t|) acronym found in the model output relates to the probability of observing any value equal to or larger than t. A small p-value indicates that it is unlikely we will observe a relationship between the predictor (x) and response (y) variables due to chance. 
+  
+  Typically, a p-value of 5% or less is a good cut-off point. Where (y) is the response variable what we try to explain by (x) the explanatory variable.
+  
+  Three stars (or asterisks) represent a highly significant p-value. Consequently, a small p-value for the intercept and the slope indicates that we can reject the null hypothesis which allows us to conclude that there is a relationship between (x) and (y).
+  
+##### P-value observed
+
+  We observed that the p-value slightly decreases from model1(0.9377) to model1less(0.427) which is good, but p-value stays not significant as previous regression. This observation informs us that for all stores together the fuel price does not influence the weekly sales. However, we will continue our investigation in the way to find a possible relation of fuel price and weekly sales per stores. 
+  
+##### The  Residual Standard Error 
+
+  Residual Standard Error is a measure of the quality of a linear regression fit. The Residual Standard Error is the average amount that the response (y) will deviate from the true regression line.
+  
+##### Residual Standard Error observed
+
+  We observed that the residual standard error lightly decreases from model1 (22710) to model1less (22120) which is good but globally the model was not good. In other words, given that the mean weekly sales for all stores are 15686.68 and that the Residual Standard Error is 22120, we can say that the percentage error is (any prediction would still be off by) 141%, which is not good.
+  
+##### The R-squared (R2) and djusted R-squared (Adj.R2)
+
+  The R-squared statistic provides a measure of how well the model is fitting the actual data. It takes the form of a proportion of variance. R-squared is a measure of the linear relationship between our predictor variable (Fuel price) and our response/target variable (Weekly sales). It always lies between 0 and 1 (i.e., a number near 0 represents a regression that does not explain the variance in the response variable in oposit with a number close to 1 which explain the observed variance in the response variable).
+  
+  The adjusted R-squared index informed us on how the model explains the variance while like for R-squared but, R-squared will always increase as more variables are included in the model. That’s why the adjusted R-squared is the preferred measure as it adjusts for the number of variables considered.
+  
+##### R2 and Adj.R2 observed
+
+  In both case for the model1less, the R2 and the Adj. R2 we obtain numbers close to 0 which tell us that the model did not explain the variance. 
+  
+##### The F-statistic
+
+  F-statistic is a good indicator of whether there is a relationship between our predictor and the response variables. The further the F-statistic is from 1 the better it is. However, how much larger the F-statistic needs to depend on both the number of data points and the number of predictors. Generally, when the number of data points is large, an F-statistic that is only a little bit larger than 1 is already sufficient to reject the null hypothesis (H0: There is no relationship between Fuel prices and Weekly sales). The reverse is true as if the number of data points is small; a large F-statistic is required to be able to ascertain that there may be a relationship between predictor and response variables.
+  
+##### F-statistic observed
+
+  In our model1less, the F-statistic is 0.6311 which is smaller than 1, which not allow us to confirm relationship between Fuel prices and Weekly sales. In this analysis because of our large number of data, if we obtain just a bit larger number than 1, it allow us to cofirm relationship between our response (Y) and our explanatory (X) variables.  
+
+```{r, echo=FALSE}
+library(data.table)
+library(dummies)
+
+TM1 <- cbind(fuelsales, dummy(fuelsales$Store, sep = "_"))
+# set_names(TM1, old=c("fuelsales_1","fuelsales_2"), new=c("Store_1", "Store_2"))
+#try create wheel
+names(TM1)[16]<-"Store_1"
+names(TM1)[17]<-"Store_2"
+names(TM1)[18]<-"Store_3"
+names(TM1)[19]<-"Store_4"
+names(TM1)[20]<-"Store_5"
+names(TM1)[21]<-"Store_6"
+names(TM1)[22]<-"Store_7"
+names(TM1)[23]<-"Store_8"
+names(TM1)[24]<-"Store_9"
+names(TM1)[25]<-"Store_10"
+names(TM1)[26]<-"Store_11"
+names(TM1)[27]<-"Store_12"
+names(TM1)[28]<-"Store_13"
+names(TM1)[29]<-"Store_14"
+names(TM1)[30]<-"Store_15"
+names(TM1)[31]<-"Store_16"
+names(TM1)[32]<-"Store_17"
+names(TM1)[33]<-"Store_18"
+names(TM1)[34]<-"Store_19"
+names(TM1)[35]<-"Store_20"
+names(TM1)[36]<-"Store_21"
+names(TM1)[37]<-"Store_22"
+names(TM1)[38]<-"Store_23"
+names(TM1)[39]<-"Store_24"
+names(TM1)[40]<-"Store_25"
+names(TM1)[41]<-"Store_26"
+names(TM1)[42]<-"Store_27"
+names(TM1)[43]<-"Store_28"
+names(TM1)[44]<-"Store_29"
+names(TM1)[45]<-"Store_30"
+names(TM1)[46]<-"Store_31"
+names(TM1)[47]<-"Store_32"
+names(TM1)[48]<-"Store_33"
+names(TM1)[49]<-"Store_34"
+names(TM1)[50]<-"Store_35"
+names(TM1)[51]<-"Store_36"
+names(TM1)[52]<-"Store_37"
+names(TM1)[53]<-"Store_38"
+names(TM1)[54]<-"Store_39"
+names(TM1)[55]<-"Store_40"
+names(TM1)[56]<-"Store_41"
+names(TM1)[57]<-"Store_42"
+names(TM1)[58]<-"Store_43"
+names(TM1)[59]<-"Store_44"
+names(TM1)[60]<-"Store_45"
+
+library(tidyverse)
+library(lubridate)
+```
+
+#### 4.2. We will build-up the second model based on the first to observe the impact per store. We will add some controls variables.
+  
+  In this second model, we will use a function as.factor which make the same effect like if we have creating dummy variables for each store. While, we will add holiday and temperature as new control variables. We will continue our analysis without the extreme values for weekly sales which are higher than 200 000. We will create interaction variables in the way to observe the impact of fuel price variation per store on the weekly sales.
+  
+```{r, echo=FALSE}  
+IDout=which(TM1$Weekly_Sales>200000)
+```
+$$ Weekly Sales = \beta_0 + \beta_1 FuelPrice + \beta_2 Store + \beta_3 FuelPrice*Store + \beta_4 IsHoliday + \beta_5 Temperature + e $$
+```{r, echo=TRUE}
+model2 = lm(Weekly_Sales~Fuel_Price+as.factor(Store)+Fuel_Price*as.factor(Store)+as.factor(IsHoliday.x)+Temperature, data=TM1[-IDout,])
+summary(model2)
+```
+
+##### Regression summary analysis Model 2 
+  
+##### P-value observed
+
+  We observed that the p-value considerably decreases from model1less(0.9377) to model2(2.2e-16) which is good based on theory, but 2.2e-16 is the smallest number larger than 0 that can be stored by the floating system in our computer. This number suppose that the sample size is enormous, which is our case or perhaps the routine that calculates p is incorrect. So we can not conclude on this global model based on the model2 p-value.
+  
+  When we observed the p-value for the explanatory variable fuel price we obtain (0.095926) which is significant at 10% indicates that we can reject the null hypothesis. It means if we increase fuel price by 1 it will
+  
+  The two controls variable which we add as holiday and temperature are highly significative both at 1%. 
+  # Temperature, p-value 0.0025: For temperature increasing of one unit, the sales decrease by 6.464, which in practice have zero impact. However, it interesting to know if the temperature increases the sales decrease. It could be interesting to observe this impact per store.
+  
+  # Holiday(TRUE), p-value 0.000350: When it is a holiday day the sales increase by 461.668, which explain human behaviour in the way that they do shoppoçing when they have free time.  
+  
+  The interaction variables (Fuel_Price*Store) allow us to observe per store the variation in weekly sales for a fuel price variation. It gives us more accurate information on the relation between weekly sales and fuel price per store. In this model2 18 stores on 45 demonstrate that the fuel price variation has a significant impact on weekly sales and in those 18 stores, weekly sales of 16 store reacted negatively to increase in a fuel price.
+  
+##### Residual Standard Error observed
+
+  We observed that the residual standard error lightly decreases from model1less with (22120) to model 2 with (22030) which is good but relatively not significant. In other words, given that the mean weekly sales for all stores are 19483.058 and that the Residual Standard Error is 22030, we can say that the percentage error is (any prediction would still be off by) 108%, which again not good. 
+  
+##### R2 and Adj.R2 observed
+
+  In both case for the model 2, the R2 and the Adj. R2 we obtain 0.09567 numbers close to 0 which tell us that the model did not explain the variance, but it is better than the model1less.
+  
+##### F-statistic observed
+
+  The F-statistic is 490.9 which is fare larger than 1, which allow us to confirm a relationship between Fuel prices and Weekly sales. 
+
+##### AIC test model 1 vs model 2
+```{r, echo=TRUE}
+AIC(model1less, model2)
+```
+
+##### The AIC index
+
+  The Akaike information criterion(AIC) is the estimator of the relative quality of statistical models or the relative goodness of fit. It'is an interesting criterion to consider when we are comparing a build up models. 
+  
+  How can we use the information from the AIC test in our analysis? Usually when we have a difference of 2 in the AIC test we can consider using the other more complex model and 10 is considering a substantial difference. 
+
+##### AIC test observation
+
+  Considering the results of this first AIC test: model1less of (3), model2 of (93), this significant difference allow you to use the model 2.
+  
+#### Conclusion analysis model 2
+
+  Globaly this second model offer us mutch better performance with more usable and accurate informations which we can consider using practicatly.
+  
+#### 4.3. We will add year and month as controls variables
+
+  We will create and add new control variables for year and month to our previous model.
+```{r, echo=TRUE}
+Year=as.numeric(substring(TM1$Date,1,4))
+Month=as.numeric(substring(TM1$Date,6,7))
+TM1=data.frame(TM1,Year,Month)
+```
+$$ Weekly Sales = \beta_0 + \beta_1 FuelPrice + \beta_2 Store + \beta_3 FuelPrice*Store + \beta_4 IsHoliday + \beta_5 Temperature + \beta_6 Year + \beta_7 Month + \beta_8 Month*FUelPrice +  e $$
+```{r, echo=TRUE}
+model3 = (lm(Weekly_Sales~Fuel_Price+as.factor(Store)+Fuel_Price*as.factor(Store)+as.factor(IsHoliday.x)+Temperature+as.factor(Year)+as.factor(Month)+as.factor(Month)*Fuel_Price, data=TM1[-IDout,]))
+summary(model3)
+```
+
+##### Regression summary analysis model 3
+
+##### P-value observed
+
+  We observed that the p-value unchanged from model 2, which is (2.2e-16) which is good in the way of theory, but for a reason explained earlier we can not conclude on this global model based this p-value.
+  
+  In we observed the p-value for the explanatory variable fuel price we obtained (0.113135) which is not significant and a lower score than we obtain in the precedent model with a p-value of (0.095926) significant at 10%. 
+  
+  The interaction variables (Fuel_Price*Store) in this model3 had 20 stores on 45, which demonstrate that the fuel price variation has a significant impact on weekly sales and in those 20 stores, weekly sales of 18 store reacted negatively to a positive variation of fuel price. 
+  
+##### Residual Standard Error observed
+
+  We observed that the residual standard error lightly decreases from model 2 with (22030) to model 3 with (22010) which relatively not significant. In other words, given that the mean weekly sales for all stores are 23761.467 and that the Residual Standard Error is 22010, we can say that the percentage error is (any prediction would still be off by) 108%, which again not good.
+  
+##### R2 and Adj.R2 observed
+
+  In both case for the model 3, the R2 and the Adj. R2 we obtained 0.097 numbers close to 0 which tell us that the model not explained the variance and is very similar to model 2. 
+  
+##### F-statistic observed
+
+  The F-statistic is 397.6 which is fare larger than 1, similar to the previous model, which again, allow us to confirm the relationship between Fuel prices and Weekly sales. 
+
+##### AIC test model 2 vs model 3
+```{r, echo=TRUE}
+AIC(model2, model3)
+```
+  
+  Considering the results of this first AIC test: model 2 of (93), model 3 of (117), which is a relatively small increase if we compare with model 1 to model 2. 
+
+#### Conclusion analysis model 3
+
+  Globally this third model offers us less performance than the model 2.
+
+#### 4.4. We will add controls variables in the way to obtain informations on stores characteristics for the stores which apears with significant relations between weekly sales fuel price.
+
+  We will try to investigate the characteristics of the stores that appear with a significant p-value at the interactive variable (Fuel_Price*Stores).
+  
+##### We will create new categories
+
+  We will create 3 categories for the small, medium and large size stores. We already have classification A, B, C of the stores but unfortunately, we can not have more information about those categories.
+  
+  Fist, we will observe the spectrum in the Walmart store size in the way to create the right categories size. We are creating those category sizes of the store in the way to observe if there exists a relation between the stores with significant relation (weekly sales/fuel price) and the category size store. 
+  
+```{r, echo=TRUE}
+hist(stores$Size)
+print(max(stores$Size))
+print(min(stores$Size))
+```
+
+```{r, echo=TRUE}
+#Create categories fore store size
+attach(stores)
+stores$Sizestore[Size > 175000] <- "Large"
+stores$Sizestore[Size > 75000 & Size <= 175000] <- "Medium"
+stores$Sizestore[Size <= 75000] <- "Smal"
+detach(stores)
+
+newData=merge(TM1, stores,by.x="Store",by.y="Store")
+
+Year=as.numeric(substring(newData$Date,1,4))
+Month=as.numeric(substring(newData$Date,6,7))
+newData=data.frame(newData,Year,Month)
+
+IDout=which(newData$Weekly_Sales>200000)
+
+```
+$$ Weekly Sales = \beta_0 + \beta_1 FuelPrice + \beta_2 Store + \beta_3 FuelPrice*Store + \beta_4 IsHoliday + \beta_5 Temperature + \beta_6 Year + \beta_7 Month + \beta_8 Month*FuelPrice + \beta_9 Type + \beta_10 SizeStore + \beta_11 Size +  e $$
+```{r, echo=TRUE}
+model4 = (lm(Weekly_Sales~Fuel_Price+as.factor(Store)+Fuel_Price*as.factor(Store)+as.factor(IsHoliday.x)+Temperature+as.factor(Year)+as.factor(Month)+as.factor(Month)*Fuel_Price+as.factor(as.numeric(Type))+as.factor(Sizestore)+as.factor(Size), data=newData[-IDout,], na.action=na.omit))
+summary(model4)
+```
+
+##### Regression summary analysis Model 4
+
+  Unfortunately, we obtained NA as results for all those new variable introduced. After the collinearity test, we conclude as we had perfect multi-colinearity for Size, Sizestore, Type, variables in this model 4 which cannot allow us to obtain more pieces of information in our analysis. 
+
+#### 6 Global analysis
+
+  In this analysis, model 2 offer the best performances globally. This second model give us specific informations on those stores 2,4,6,10,14,15,18,19,21,24,27,28,30,35,36,37,39 and 43, for which fuel price variation have significant impact. For the stores 39 and 4 when the fuel price increase the weekly sales increase too and for all other stores when the fuel price increase the weekly sales decrease.       
+
+#### 7 Conclusion
+
+  This analysis allows us to reach our main goals which were to obtained information on the relation between weekly sales and fuel price. This analysis opens the doors for the research on the impact of the impact of price variation of fuel on the Walmart consumer behaviour.   
+  
