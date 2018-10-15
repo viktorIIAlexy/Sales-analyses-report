@@ -14,9 +14,9 @@ output:
   
   Is it exist an impact on consumer behaviour when there is variation in the fuel price. If there exists a cause to effect what is the magnitude of this effect and how the consumer will react? Will they consume more or less at Walmart store?
   
-  In the first part, we will build the most accurate model which can explain the impact on the Wall-Mart consumer behaviours.
+  In the first part, we will build the most accurate model which can explain the impact on the Walmart consumer behaviours.
   
-  In the second part, we will try to identify if there are some store which can use the fuel price variation as an indicator on the future Wall-Mart sales.
+  In the second part, we will try to identify if there are some store which can use the fuel price variation as an indicator on the future Walmart sales.
   
   In the third part, we will try to identify if the stores for which the fuel price variation have a significant impact if those stores have some common characteristics as stores sizes or geographical localization.
   
@@ -375,5 +375,5 @@ summary(model4)
 
 #### 7 Conclusion
 
-  This analysis allows us to reach our main goals which were to obtained information on the relation between weekly sales and fuel price. This analysis opens the doors for the research on the impact of the impact of price variation of fuel on the Walmart consumer behaviour.   
+  This analysis allows us to reach our main goals which were to obtained information on the relation between weekly sales and fuel price. This analysis opens the doors for the research on the impact of the impact of price variation of fuel on the Walmart consumers behaviours.   
   
